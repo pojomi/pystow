@@ -1,5 +1,7 @@
 # pystow
 
+![screenshot](screenshot.png)
+
 A terminal UI for managing dotfile symlinks. Select packages from your dotfiles repository and pystow will create the corresponding symlinks in your home directory. Directory structure mimics that of GNU Stow.
 
 ## Requirements
