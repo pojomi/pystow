@@ -1,5 +1,4 @@
 import os
-from os import path as p
 from curses import color_pair as color, window
 from classes import Dirs, WinProps, Button
 
@@ -52,7 +51,7 @@ def _show_help(stdscr: window, inner: window, innerp: WinProps) -> None:
             inner.refresh()
             break
 
-def _loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset:Button) -> None:
+def loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset:Button) -> None:
     # Track focused row
     l:int = 0
     # Main loop
@@ -104,7 +103,7 @@ def _loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, re
 
             case "k" | "KEY_UP" | "":
 
-                if ok.is_focused or reset.is_focused and isinstance(l, int):
+                if ok.is_focused or reset.is_focused: 
                     ok.is_focused = False
                     reset.is_focused = False
 

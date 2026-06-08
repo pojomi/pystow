@@ -6,7 +6,7 @@ from curses import wrapper, window, color_pair as color
 from classes import Button, Dirs, WinProps
 import keymap, manage_windows
 
-def main(stdscr, dots):
+def main(stdscr:window, dots:str):
     if not hasattr(os, 'symlink'):
         raise OSError('os.symlink() is not supported on this system')
 
@@ -56,7 +56,7 @@ def main(stdscr, dots):
         inner.chgat(1,1, color(3))
         inner.refresh()
 
-        keymap._loop(dirs, stdscr, inner, innerp, ok, reset)
+        keymap.loop(dirs, stdscr, inner, innerp, ok, reset)
     except curses.error as e:
         raise e
 

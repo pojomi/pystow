@@ -4,6 +4,8 @@ from curses import window
 
 class WinProps:
     def __init__(self, win:window, is_root:bool):
+        self.lines:int
+        self.cols:int
         self.lines,self.cols = win.getmaxyx()
         self.marginy:int = round((self.lines*0.1)/2)
         self.marginx:int = round((self.cols*0.1)/2)
@@ -19,6 +21,7 @@ class Dirs:
     def __init__(self, rootdir:str):
         self.root:str = rootdir
         self.home:str
+        self.dots:list[str]
         try:
             self.home = os.getenv('HOME')  # type: ignore
         except (TypeError, AttributeError) as e:
@@ -90,7 +93,7 @@ class Button:
         self.label_len:int = len(self.label)
         self.row:int = row
         self.cols:int = col_count
-        self.row_center = self.cols // 2
+        self.row_center:int = self.cols // 2
         self.start_pos:int
         if left:
             self.start_pos = self.row_center - 5 - len(self.label)
