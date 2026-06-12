@@ -1,4 +1,5 @@
 import os
+from os import path as p
 from curses import color_pair as color, window
 from classes import Dir, WinProps, Button
 
@@ -220,7 +221,7 @@ def loop(dir:Dir, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset
                 if ok.is_focused:
                         try:
                             for i in dir.selected_indexes:
-                                os.symlink(dir.dot_subtree[i][0],dir.link[i])
+                                os.symlink(p.join(dir.dot_subtree[i][0],dir.dot_subtree[i][1][0],dir.dot_tree[1][i]),dir.link[i])
                         except OSError as e:
                             print(e.strerror)
                         else:
