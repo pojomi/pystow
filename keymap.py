@@ -82,9 +82,9 @@ def loop(dir:Dir, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset
 
 
                     if not dir.selected_indexes.index(dir.highlighted):
-                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[dir.shown_range[1]][1]}')
+                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[1][dir.shown_range[1]]}')
                     else:
-                        inner.addstr(l, 1, f'[*]{dir.dot_tree[dir.shown_range[1]][1]}')
+                        inner.addstr(l, 1, f'[*]{dir.dot_tree[1][dir.shown_range[1]]}')
 
                     dir.incr_range()
 
@@ -133,9 +133,9 @@ def loop(dir:Dir, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset
                         dir.highlighted-=1
 
                     if not dir.selected_indexes.index(dir.highlighted):
-                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[dir.shown_range[0]][1]}')
+                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[1][dir.shown_range[0]]}')
                     else:
-                        inner.addstr(l, 1, f'[*]{dir.dot_tree[dir.shown_range[0]][1]}')
+                        inner.addstr(l, 1, f'[*]{dir.dot_tree[1][dir.shown_range[0]]}')
 
                     inner.chgat(l, 1, color(3))
                     stdscr.border()
@@ -147,21 +147,21 @@ def loop(dir:Dir, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset
                     l = inner.getyx()[0]
                     # Draw default unselected row and clear from cursor to EOL
                     # to fully reset. Remove row from dir.selected
-                    if dir.dot_tree.index(dir.highlighted) in dir.selected_indexes:
-                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[dir.highlighted][1]}', color(3))
+                    if dir.dot_tree[1].index(dir.dot_tree[1][dir.highlighted]) in dir.selected_indexes:
+                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[1][dir.highlighted]}', color(3))
                         inner.clrtoeol()
                         inner.chgat(color(3))
                         dir.selected_indexes.remove(dir.highlighted)
                     # Handle adding new selection
                         # Redraw same line but append error message
-                    elif os.path.exists(dir.link_path[dir.highlighted]):
+                    elif os.path.exists(dir.link[dir.highlighted]):
                         inner.addstr(l, dir.longest, 'Already exists', color(4))
                     else:
                         # Returns True if directory does not exist
                         # Add selection '*', and append symlink reference
                         dir.selected_indexes.append(dir.highlighted)
                         inner.addch(l, 2, '*', color(3))
-                        inner.addstr(l, dir.longest, f'-> {dir.link_path[dir.highlighted]}', color(3))
+                        inner.addstr(l, dir.longest, f'-> {dir.link[dir.highlighted]}', color(3))
 
                     inner.refresh()
             case "\t" | "l" | "h" | "" | "":
@@ -206,7 +206,7 @@ def loop(dir:Dir, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset
                 if reset.is_focused:
                     i:int = 1
                     inner.chgat(innerp.bottom_margin, 1, color(1))
-                    for r in dir.dot_tree[dir.shown_range[0]:dir.shown_range[1]-dir.shown_range[0]][1]:
+                    for r in dir.dot_tree[1][dir.shown_range[0]:dir.shown_range[1]-dir.shown_range[0]]:
                         inner.addstr(i, 1, f'[ ]{r}', color(1))
                         inner.clrtoeol()
                         inner.chgat(color(1))
@@ -220,7 +220,7 @@ def loop(dir:Dir, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset
                 if ok.is_focused:
                         try:
                             for i in dir.selected_indexes:
-                                os.symlink(dir.dot_subtree[i][0],dir.link_path[i])
+                                os.symlink(dir.dot_subtree[i][0],dir.link[i])
                         except OSError as e:
                             print(e.strerror)
                         else:

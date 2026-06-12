@@ -31,21 +31,28 @@ class Dir:
 
         self.dot_tree:tuple[str, list[str], list[str]] = next(os.walk(self.root))
         self.dot_tree[1].remove('.git')
-        self.dot_subtree:list[tuple[str, list[str], list[str]]] = []
-        for d in self.dot_tree[1]:
-            self.dot_subtree.append(next(os.walk(p.join(self.dot_tree[0],d))))
+        # (~/dotfiles/dotname, [dir], [file])
+        self.dot_subtree:list[tuple[str, list[str], list[str]]] = [ 
+            next(os.walk(p.join(self.dot_tree[0], d))) for d in self.dot_tree[1]
+        ]
 
-        # (~/dotfiles, [dot dirs], [dot files])
-        self.links:list[tuple[str, str | list[str], str | list[str]]] = \
-            list(zip(self.dot_tree[1], self.dot_subtree[1], self.dot_subtree[2]))
-
-        # [~/dot-dir-or-file]
-        self.link_path:list[str] = [p.join(self.home,d if len(d) > 0 else f) for _,d,f in self.links[0]]
+        self.link:list[str] = []
+        for i in range(len(self.dot_tree[1])):
+            # ~/basedir/dir
+            if len(self.dot_subtree[i][1]) > 0 and len(self.dot_subtree[i][2]) == 0:
+                if self.dot_tree[1][i] != self.dot_subtree[i][1][0]:
+                    self.link.append(p.join(self.home,self.dot_subtree[i][1][0],self.dot_tree[1][i]))
+                # ~/dir --- example ~/Documents
+                else:
+                    self.link.append(p.join(self.home,self.dot_tree[1][i]))
+            # ~/file
+            elif len(self.dot_subtree[i][2]) > 0 and len(self.dot_subtree[i][1]) == 0:
+                self.link.append(p.join(self.home,self.dot_subtree[i][2][0]))
 
         self.selected_indexes:list[int] = []
 
-        self.longest:int = len(max(self.dot_tree, key=lambda k: k[1]))+5
-        self.count:int = len(self.dot_tree)
+        self.longest:int = len(max(self.dot_tree, key=lambda k: k[1] if k else ''))+5 
+        self.count:int = len(self.dot_tree[1])
         self.shown_range:list[int] = []
         # Tracker for cursor-index relationship
         # Calculate by comparing index to line, add if gt visible rows

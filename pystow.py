@@ -34,8 +34,9 @@ def main(stdscr:window, dots:str):
 
     # Draw initial screen -- Either all contents or max inner_lines
     try:
-        for d in dirs.dot_tree[0:innerp.lines] if dirs.count >= innerp.lines else dirs.dot_tree:
-            inner.addstr(pos, 1, f'[ ]{d[1]}', color(1))
+        max_iter:int = innerp.lines if len(dirs.dot_tree[1]) > innerp.lines else len(dirs.dot_tree[1])
+        for i in range(max_iter):
+            inner.addstr(pos, 1, f'[ ]{dirs.dot_tree[1][i]}', color(1))
             pos+=1
 
         dirs.shown_range = [0, pos-1]
