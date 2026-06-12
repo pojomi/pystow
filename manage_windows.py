@@ -28,7 +28,7 @@ def stdscr_setup() -> None:
             # init_color(15, *hex_to_rgb('#b2a790'))
             init_color(12, *hex_to_rgb('#7ac9c0'))
 
-            c.curs_set(0)
+            _ = c.curs_set(0)
             init_pair(1, 7, 8) # Default
             init_pair(2, 4, 8) # Ok/Reset Buttons
             init_pair(3, 0, 12) # Highlight

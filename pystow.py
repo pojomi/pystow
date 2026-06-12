@@ -3,7 +3,7 @@ from os import path as p
 import sys
 import curses
 from curses import wrapper, window, color_pair as color
-from classes import Button, Dirs, WinProps
+from classes import Button, Dir, WinProps
 import keymap, manage_windows
 
 def main(stdscr:window, dots:str):
@@ -23,10 +23,10 @@ def main(stdscr:window, dots:str):
     manage_windows.inner_init(inner, innerp)
 
     # Primary class for all file path management
-    dirs:Dirs
+    dirs:Dir
 
     if p.exists(dots):
-        dirs = Dirs(dots)
+        dirs = Dir(dots)
     else:
         raise TypeError(f'Invalid path: {dots}')
 
@@ -34,8 +34,8 @@ def main(stdscr:window, dots:str):
 
     # Draw initial screen -- Either all contents or max inner_lines
     try:
-        for d in dirs.dots[0:innerp.lines] if dirs.count >= innerp.lines else dirs.dots:
-            inner.addstr(pos, 1, f'[ ]{d}', color(1))
+        for d in dirs.dot_tree[0:innerp.lines] if dirs.count >= innerp.lines else dirs.dot_tree:
+            inner.addstr(pos, 1, f'[ ]{d[1]}', color(1))
             pos+=1
 
         dirs.shown_range = [0, pos-1]

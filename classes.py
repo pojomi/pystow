@@ -1,5 +1,6 @@
 import os
 from os import path as p
+from typing import cast
 from curses import window
 
 class WinProps:
@@ -17,64 +18,38 @@ class WinProps:
 
         self.bottom_margin:int = self.lines-1
 
-class Dirs:
+class Dir:
     def __init__(self, rootdir:str):
         self.root:str = rootdir
         self.home:str
-        self.dots:list[str]
+        # self.dots:dict[str, list[str] | str] = {}
+
         try:
-            self.home = os.getenv('HOME')  # type: ignore
+            self.home = cast(str, os.getenv('HOME'))  # type: ignore
         except (TypeError, AttributeError) as e:
             raise RuntimeError('Failed to get HOME environment variable') from e
 
-        _,self.dots,_ = next(os.walk(self.root))
-        self.dots.remove('.git')
+        self.dot_tree:tuple[str, list[str], list[str]] = next(os.walk(self.root))
+        self.dot_tree[1].remove('.git')
+        self.dot_subtree:list[tuple[str, list[str], list[str]]] = []
+        for d in self.dot_tree[1]:
+            self.dot_subtree.append(next(os.walk(p.join(self.dot_tree[0],d))))
 
-        self.link_src:list[str] = [] # Full paths to source dotfiles
-        self.link_dest:list[str] = [] # Full paths to selected symlink destinations
-        self.dest_ref:list[str] = [] # References to destination paths for linking
-        self.src_ref:list[str] = [] # References to source paths for linking
-        for d in self.dots:
-            root,dir,file = next(os.walk(p.join(self.root, d)))
-            if len(dir) > 0:
-                self.src_ref.append(p.join(root, dir[0]))
-                home_path_as_dir = p.join(self.home, dir[0], d)
-                if p.exists(home_path_as_dir):
-                    self.dest_ref.append('d')
-                else:
-                    self.dest_ref.append(home_path_as_dir)
-            elif len(file) == 1 and len(dir) == 0:
-                home_path_as_file = p.join(self.home, d, file[0])
-                self.src_ref.append(p.join(self.root, d, file[0]))
-                if p.exists(home_path_as_file):
-                    self.dest_ref.append('f')
-                else:
-                    self.dest_ref.append(home_path_as_file)
+        # (~/dotfiles, [dot dirs], [dot files])
+        self.links:list[tuple[str, str | list[str], str | list[str]]] = \
+            list(zip(self.dot_tree[1], self.dot_subtree[1], self.dot_subtree[2]))
 
-        self.longest:int = len(max(self.dots, key=len))+5
-        self.count:int = len(self.dots)
+        # [~/dot-dir-or-file]
+        self.link_path:list[str] = [p.join(self.home,d if len(d) > 0 else f) for _,d,f in self.links[0]]
+
+        self.selected_indexes:list[int] = []
+
+        self.longest:int = len(max(self.dot_tree, key=lambda k: k[1]))+5
+        self.count:int = len(self.dot_tree)
         self.shown_range:list[int] = []
         # Tracker for cursor-index relationship
         # Calculate by comparing index to line, add if gt visible rows
         self.highlighted:int = 0
-        self.selected:list[str] = []
-
-
-    def add_src(self, path:str) -> bool:
-        index:int = self.dots.index(path)
-
-        self.link_src.append(self.src_ref[index])
-        return True
-
-    def add_dest(self, path:str) -> bool:
-        index:int = self.dots.index(path)
-
-        if len(self.dest_ref[index]) > 1:
-            self.link_dest.append(self.dest_ref[index])
-            self.selected.append(path)
-            return True
-        else:
-            return False
 
 
     def incr_range(self) -> None:
@@ -84,7 +59,6 @@ class Dirs:
     def decr_range(self) -> None:
         self.shown_range[0]-=1
         self.shown_range[1]-=1
-
 
 class Button:
     def __init__(self, label:str, row:int, col_count:int, left:bool):

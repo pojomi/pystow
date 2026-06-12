@@ -1,6 +1,6 @@
 import os
 from curses import color_pair as color, window
-from classes import Dirs, WinProps, Button
+from classes import Dir, WinProps, Button
 
 _HELP_BINDINGS: list[tuple[str, str]] = [
     ("j / Down / ^N", "Move down"),
@@ -51,7 +51,7 @@ def _show_help(stdscr: window, inner: window, innerp: WinProps) -> None:
             inner.refresh()
             break
 
-def loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset:Button) -> None:
+def loop(dir:Dir, stdscr:window, inner:window, innerp:WinProps, ok:Button, reset:Button) -> None:
     # Track focused row
     l:int = 0
     # Main loop
@@ -63,30 +63,30 @@ def loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, res
             case "j" | "KEY_DOWN" | "":
                 l = inner.getyx()[0]
                 # Move highlighted selection down by 1
-                if l < dirs.count and l < innerp.lines:
+                if l < dir.count and l < innerp.lines:
                     inner.chgat(l,1, color(1))
                     l+=1
-                    dirs.highlighted+=1
+                    dir.highlighted+=1
 
                     inner.move(l, 2)
                     inner.chgat(l, 1, color(3))
                     inner.refresh()
                 # Scroll if not all shown
-                elif l == innerp.lines and dirs.count > innerp.lines and dirs.shown_range[1] < dirs.count:
+                elif l == innerp.lines and dir.count > innerp.lines and dir.shown_range[1] < dir.count:
                     inner.scroll()
                     inner.chgat(l-1, 1, color(1))
 
                     # Only increment up to last accessible row
-                    if dirs.highlighted + 1 <= dirs.count:
-                        dirs.highlighted+=1
+                    if dir.highlighted + 1 <= dir.count:
+                        dir.highlighted+=1
 
 
-                    if dirs.dots[dirs.highlighted] not in dirs.selected:
-                        inner.addstr(l, 1, f'[ ]{dirs.dots[dirs.shown_range[1]]}')
+                    if not dir.selected_indexes.index(dir.highlighted):
+                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[dir.shown_range[1]][1]}')
                     else:
-                        inner.addstr(l, 1, f'[*]{dirs.dots[dirs.shown_range[1]]}')
+                        inner.addstr(l, 1, f'[*]{dir.dot_tree[dir.shown_range[1]][1]}')
 
-                    dirs.incr_range()
+                    dir.incr_range()
 
                     inner.chgat(l, 1, color(3))
                     stdscr.attrset(color(2))
@@ -103,13 +103,13 @@ def loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, res
 
             case "k" | "KEY_UP" | "":
 
-                if ok.is_focused or reset.is_focused: 
+                if ok.is_focused or reset.is_focused:
                     ok.is_focused = False
                     reset.is_focused = False
 
                     inner.chgat(innerp.bottom_margin, 1, color(1))
-                    inner.chgat(dirs.shown_range[1] if l > 0 else 1, 1, color(3))
-                    dirs.highlighted = dirs.shown_range[1]-1
+                    inner.chgat(dir.shown_range[1] if l > 0 else 1, 1, color(3))
+                    dir.highlighted = dir.shown_range[1]-1
                     inner.refresh()
                     continue
 
@@ -117,60 +117,51 @@ def loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, res
                 if l > 1:
                     inner.chgat(l,1, color(1))
                     l-=1
-                    dirs.highlighted-=1
+                    dir.highlighted-=1
 
                     inner.move(l, 2)
                     inner.chgat(l,1, color(3))
                     inner.refresh()
                 # Scroll if not all shown
-                elif l == 1 and dirs.shown_range[0] > 0:
+                elif l == 1 and dir.shown_range[0] > 0:
                     inner.scroll(-1)
                     inner.chgat(l+1, 1, color(1))
-                    dirs.decr_range()
+                    dir.decr_range()
 
 
-                    if dirs.highlighted - 1 >= 0 and not (ok.is_focused or reset.is_focused):
-                        dirs.highlighted-=1
+                    if dir.highlighted - 1 >= 0 and not (ok.is_focused or reset.is_focused):
+                        dir.highlighted-=1
 
-                    if dirs.dots[dirs.highlighted] not in dirs.selected:
-                        inner.addstr(l, 1, f'[ ]{dirs.dots[dirs.shown_range[0]]}')
+                    if not dir.selected_indexes.index(dir.highlighted):
+                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[dir.shown_range[0]][1]}')
                     else:
-                        inner.addstr(l, 1, f'[*]{dirs.dots[dirs.shown_range[0]]}')
+                        inner.addstr(l, 1, f'[*]{dir.dot_tree[dir.shown_range[0]][1]}')
 
                     inner.chgat(l, 1, color(3))
                     stdscr.border()
                     stdscr.refresh()
                     inner.refresh()
             case " ":
-                # Unselect the row if it's found in dirs.selected
+                # Unselect the row if it's found in dir.selected
                 if not ok.is_focused and not reset.is_focused:
                     l = inner.getyx()[0]
                     # Draw default unselected row and clear from cursor to EOL
-                    # to fully reset. Remove row from dirs.selected
-                    if dirs.dots[dirs.highlighted] in dirs.selected:
-                        inner.addstr(l, 1, f'[ ]{dirs.dots[dirs.highlighted]}', color(3))
+                    # to fully reset. Remove row from dir.selected
+                    if dir.dot_tree.index(dir.highlighted) in dir.selected_indexes:
+                        inner.addstr(l, 1, f'[ ]{dir.dot_tree[dir.highlighted][1]}', color(3))
                         inner.clrtoeol()
                         inner.chgat(color(3))
-                        dirs.selected.remove(dirs.dots[dirs.highlighted])
-                        dirs.link_dest.remove(dirs.dest_ref[dirs.highlighted])
-                        if dirs.src_ref[dirs.highlighted] in dirs.link_src:
-                            dirs.link_src.remove(dirs.src_ref[dirs.highlighted])
+                        dir.selected_indexes.remove(dir.highlighted)
                     # Handle adding new selection
+                        # Redraw same line but append error message
+                    elif os.path.exists(dir.link_path[dir.highlighted]):
+                        inner.addstr(l, dir.longest, 'Already exists', color(4))
                     else:
                         # Returns True if directory does not exist
                         # Add selection '*', and append symlink reference
-                        if len(dirs.dest_ref[dirs.highlighted]) > 1:
-                            dirs.link_dest.append(dirs.dest_ref[dirs.highlighted])
-                            dirs.link_src.append(dirs.src_ref[dirs.highlighted])
-                            dirs.selected.append(dirs.dots[dirs.highlighted])
-                            inner.addch(l, 2, '*', color(3))
-                            inner.addstr(l, dirs.longest, f'-> {dirs.link_dest[-1]}', color(3))
-                        # Redraw same line but append error message
-                        else:
-                            if dirs.dest_ref[dirs.highlighted] == 'f':
-                                inner.addstr(l, dirs.longest, 'File already exists', color(4))
-                            elif dirs.dest_ref[dirs.highlighted] == 'd':
-                                inner.addstr(l, dirs.longest, 'Directory already exists', color(4))
+                        dir.selected_indexes.append(dir.highlighted)
+                        inner.addch(l, 2, '*', color(3))
+                        inner.addstr(l, dir.longest, f'-> {dir.link_path[dir.highlighted]}', color(3))
 
                     inner.refresh()
             case "\t" | "l" | "h" | "" | "":
@@ -215,32 +206,29 @@ def loop(dirs:Dirs, stdscr:window, inner:window, innerp:WinProps, ok:Button, res
                 if reset.is_focused:
                     i:int = 1
                     inner.chgat(innerp.bottom_margin, 1, color(1))
-                    for r in dirs.dots[dirs.shown_range[0]:dirs.shown_range[1]-dirs.shown_range[0]]:
+                    for r in dir.dot_tree[dir.shown_range[0]:dir.shown_range[1]-dir.shown_range[0]][1]:
                         inner.addstr(i, 1, f'[ ]{r}', color(1))
                         inner.clrtoeol()
                         inner.chgat(color(1))
                         i+=1
-                    dirs.selected.clear()
+                    dir.selected_indexes.clear()
                     inner.chgat(1, 1, color(3))
-                    dirs.highlighted = 0
+                    dir.highlighted = 0
                     reset.is_focused = False
                     l = 1
                     inner.refresh()
                 if ok.is_focused:
                         try:
-                            for sym,dst in zip(dirs.link_src, dirs.link_dest):
-                                # This should always succeed since paths are filtered
-                                # when selections are made
-                                os.symlink(sym, dst)
+                            for i in dir.selected_indexes:
+                                os.symlink(dir.dot_subtree[i][0],dir.link_path[i])
                         except OSError as e:
                             print(e.strerror)
                         else:
-                            success_msg:str = f'Success: {len(dirs.link_src)} links created'
+                            success_msg:str = f'Success: {len(dir.selected_indexes)} links created'
                             start_point = innerp.cols // 2 - len(success_msg) // 2
                             inner.addstr(innerp.bottom_margin-1, start_point, success_msg, color(5))
                             ok.is_focused = False
-                            dirs.selected.clear()
-                            dirs.link_dest.clear()
+                            dir.selected_indexes.clear()
                             l = 1
                             inner.refresh()
             case "?":
